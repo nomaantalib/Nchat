@@ -1,10 +1,12 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function ProfileScreen() {
   const { theme, switchTheme } = useTheme();
+  const { logout } = useAuth();
 
   const settings = [
     { icon: 'key-outline', name: 'Account', desc: 'Security notifications, change number' },
@@ -49,6 +51,19 @@ export default function ProfileScreen() {
             </View>
           </TouchableOpacity>
         ))}
+
+        <TouchableOpacity 
+          style={[styles.settingItem, { borderBottomColor: theme.border, marginTop: 20 }]} 
+          onPress={() => {
+             logout();
+          }}
+        >
+          <Ionicons name="log-out-outline" size={24} color="#fa3e3e" style={styles.settingIcon} />
+          <View style={styles.settingInfo}>
+            <Text style={[styles.settingName, { color: '#fa3e3e' }]}>Logout</Text>
+            <Text style={[styles.settingDesc, { color: theme.textLight }]}>Sign out of your account</Text>
+          </View>
+        </TouchableOpacity>
       </View>
     </View>
   );
