@@ -73,6 +73,7 @@ function AppStack() {
       <Stack.Screen name="MainTabs" component={MainTabs} />
       <Stack.Screen name="ChatRoom" component={ChatRoomScreen} />
       <Stack.Screen name="StoryViewer" component={StoryViewerScreen} />
+      <Stack.Screen name="CallScreen" component={CallScreen} />
     </Stack.Navigator>
   );
 }
