@@ -57,4 +57,39 @@ const authUser = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, authUser };
+const searchUsers = async (req, res) => {
+  const keyword = req.query.search
+    ? {
+        $or: [
+          { name: { $regex: req.query.search, $options: 'i' } },
+          { email: { $regex: req.query.search, $options: 'i' } },
+        ],
+      }
+    : {};
+  try {
+    const users = await User.find(keyword).find({ _id: { $ne: req.user._id } }).select('-password');
+    res.json(users);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+const updateProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    user.name = req.body.name || user.name;
+    if (req.body.pic) user.pic = req.body.pic;
+    if (req.body.newPassword) {
+      user.password = req.body.newPassword;
+    }
+
+    const updated = await user.save();
+    res.json({ _id: updated._id, name: updated.name, email: updated.email, pic: updated.pic, token: req.body.token });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+module.exports = { registerUser, authUser, searchUsers, updateProfile };

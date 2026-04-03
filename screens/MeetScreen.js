@@ -1,8 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Share, Clipboard, Alert } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
+
+const RECENT_MEETINGS = [
+  { id: 'MEET01', title: 'Daily Standup', time: 'Today, 10:00 AM', participants: 4 },
+  { id: 'XK92PL', title: 'Project Review', time: 'Yesterday, 3:00 PM', participants: 7 },
+  { id: 'AZ7TX3', title: 'One-on-One', time: 'Mon, 2:30 PM', participants: 2 },
+];
 
 export default function MeetScreen({ navigation }) {
   const { theme } = useTheme();
@@ -10,53 +16,70 @@ export default function MeetScreen({ navigation }) {
   const [meetingCode, setMeetingCode] = useState('');
 
   const createMeeting = () => {
-    // Generate a random 6-character alphanumeric code
     const newCode = Math.random().toString(36).substring(2, 8).toUpperCase();
     navigation.navigate('CallScreen', { roomId: newCode, isHost: true });
   };
 
   const joinMeeting = () => {
-    if (meetingCode.trim().length > 0) {
-      navigation.navigate('CallScreen', { roomId: meetingCode.toUpperCase(), isHost: false });
-    }
+    if (meetingCode.trim().length < 4)
+      return Alert.alert('Invalid Code', 'Please enter a valid meeting code.');
+    navigation.navigate('CallScreen', { roomId: meetingCode.toUpperCase(), isHost: false });
+  };
+
+  const shareMeeting = async (code) => {
+    await Share.share({ message: `Join my NChat meeting! Code: ${code}` });
+  };
+
+  const copyCode = (code) => {
+    Clipboard.setString(code);
+    Alert.alert('Copied!', `Meeting code ${code} copied to clipboard.`);
   };
 
   return (
-    <ScrollView 
+    <ScrollView
       style={[styles.container, { backgroundColor: theme.background }]}
-      showsVerticalScrollIndicator={true}
-      indicatorStyle="default"
+      showsVerticalScrollIndicator
+      indicatorStyle={theme.isDark ? 'white' : 'black'}
       scrollIndicatorInsets={{ right: 1 }}
     >
-      <View style={styles.header}>
-        <Ionicons name="videocam" size={100} color={theme.primary} style={{ marginBottom: 10 }} />
-        <Text style={[styles.title, { color: theme.textDark }]}>Video Meetings</Text>
-        <Text style={[styles.subtitle, { color: theme.textLight }]}>
-          Connect with high-quality video calling powered by WebRTC structure.
+      {/* Hero */}
+      <View style={[styles.hero, { backgroundColor: theme.headerBg, borderColor: theme.border }]}>
+        <View style={[styles.heroIcon, { backgroundColor: `${theme.primary}20` }]}>
+          <Ionicons name="videocam" size={52} color={theme.primary} />
+        </View>
+        <Text style={[styles.heroTitle, { color: theme.textDark }]}>Video Meetings</Text>
+        <Text style={[styles.heroSub, { color: theme.textLight }]}>
+          HD video & audio — invite anyone with a code
         </Text>
       </View>
 
-      <View style={styles.actionContainer}>
-        <TouchableOpacity 
-          style={[styles.createButton, { backgroundColor: theme.primary }]}
-          onPress={createMeeting}
-        >
-          <Ionicons name="videocam" size={24} color="#fff" />
-          <Text style={styles.createButtonText}>New Meeting</Text>
+      {/* Action Buttons */}
+      <View style={styles.actionRow}>
+        <TouchableOpacity style={[styles.actionCard, { backgroundColor: theme.primary }]} onPress={createMeeting}>
+          <Ionicons name="add-circle" size={30} color="#fff" />
+          <Text style={styles.actionCardText}>New Meeting</Text>
+          <Text style={styles.actionCardSub}>Start instantly</Text>
         </TouchableOpacity>
 
-        <View style={styles.dividerContainer}>
-          <View style={styles.line} />
-          <Text style={[styles.orText, { color: theme.textLight }]}>OR</Text>
-          <View style={styles.line} />
-        </View>
+        <TouchableOpacity
+          style={[styles.actionCard, { backgroundColor: theme.headerBg, borderColor: theme.border, borderWidth: 1.5 }]}
+          onPress={() => navigation.navigate('CallScreen', { roomId: 'SCHED01', isHost: false })}
+        >
+          <Ionicons name="calendar" size={30} color={theme.primary} />
+          <Text style={[styles.actionCardText, { color: theme.textDark }]}>Schedule</Text>
+          <Text style={[styles.actionCardSub, { color: theme.textLight }]}>Plan for later</Text>
+        </TouchableOpacity>
+      </View>
 
-        <View style={styles.joinContainer}>
-          <View style={[styles.inputWrapper, { borderColor: theme.border }]}>
-            <Ionicons name="keypad" size={20} color={theme.textLight} style={styles.inputIcon} />
+      {/* Join via Code */}
+      <View style={[styles.joinCard, { backgroundColor: theme.headerBg, borderColor: theme.border }]}>
+        <Text style={[styles.joinLabel, { color: theme.textDark }]}>Join with a code</Text>
+        <View style={styles.joinRow}>
+          <View style={[styles.codeInput, { borderColor: theme.border, backgroundColor: theme.background }]}>
+            <Ionicons name="keypad-outline" size={18} color={theme.textLight} style={{ marginRight: 8 }} />
             <TextInput
-              style={[styles.input, { color: theme.textDark }]}
-              placeholder="Enter meeting code"
+              style={[styles.codeInputText, { color: theme.textDark }]}
+              placeholder="Enter code"
               placeholderTextColor={theme.textLight}
               value={meetingCode}
               onChangeText={setMeetingCode}
@@ -64,116 +87,77 @@ export default function MeetScreen({ navigation }) {
               maxLength={8}
             />
           </View>
-          <TouchableOpacity 
-            style={[
-              styles.joinButton, 
-              { backgroundColor: meetingCode.trim().length > 0 ? theme.primary : theme.border }
-            ]}
+          <TouchableOpacity
+            style={[styles.joinBtn, { backgroundColor: meetingCode.trim().length >= 4 ? theme.primary : theme.border }]}
             onPress={joinMeeting}
-            disabled={meetingCode.trim().length === 0}
           >
-            <Text style={[
-              styles.joinButtonText, 
-              { color: meetingCode.trim().length > 0 ? '#fff' : theme.textLight }
-            ]}>Join</Text>
+            <Ionicons name="enter-outline" size={22} color={meetingCode.trim().length >= 4 ? '#fff' : theme.textLight} />
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Recent Meetings */}
+      <Text style={[styles.sectionLabel, { color: theme.primary }]}>Recent Meetings</Text>
+      {RECENT_MEETINGS.map((m) => (
+        <View key={m.id} style={[styles.meetCard, { backgroundColor: theme.headerBg, borderColor: theme.border }]}>
+          <View style={[styles.meetIcon, { backgroundColor: `${theme.primary}18` }]}>
+            <Ionicons name="videocam-outline" size={22} color={theme.primary} />
+          </View>
+          <View style={styles.meetInfo}>
+            <Text style={[styles.meetTitle, { color: theme.textDark }]}>{m.title}</Text>
+            <Text style={[styles.meetMeta, { color: theme.textLight }]}>
+              {m.time} · {m.participants} participants · #{m.id}
+            </Text>
+          </View>
+          <TouchableOpacity style={styles.meetAction} onPress={() => shareMeeting(m.id)}>
+            <Ionicons name="share-social-outline" size={20} color={theme.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.meetAction} onPress={() => navigation.navigate('CallScreen', { roomId: m.id, isHost: false })}>
+            <Ionicons name="enter-outline" size={20} color={theme.primary} />
+          </TouchableOpacity>
+        </View>
+      ))}
+      <View style={{ height: 40 }} />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1 },
+  hero: {
+    alignItems: 'center', margin: 16, borderRadius: 20, padding: 28,
+    borderWidth: 1, elevation: 2,
+    shadowColor: '#000', shadowOpacity: 0.06,
+    shadowOffset: { width: 0, height: 2 }, shadowRadius: 6,
   },
-  header: {
-    alignItems: 'center',
-    padding: 30,
-    marginTop: 20,
+  heroIcon: { width: 90, height: 90, borderRadius: 45, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  heroTitle: { fontSize: 24, fontWeight: '800', marginBottom: 6 },
+  heroSub: { fontSize: 14, textAlign: 'center' },
+  actionRow: { flexDirection: 'row', paddingHorizontal: 16, gap: 12, marginBottom: 16 },
+  actionCard: {
+    flex: 1, borderRadius: 18, padding: 18, alignItems: 'center',
+    elevation: 3, shadowColor: '#000', shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 }, shadowRadius: 6,
   },
-  heroImage: {
-    width: 120,
-    height: 120,
-    marginBottom: 20,
+  actionCardText: { color: '#fff', fontWeight: '800', fontSize: 15, marginTop: 10 },
+  actionCardSub: { color: 'rgba(255,255,255,0.75)', fontSize: 12, marginTop: 2 },
+  joinCard: { marginHorizontal: 16, borderRadius: 18, padding: 18, borderWidth: 1, marginBottom: 16 },
+  joinLabel: { fontSize: 16, fontWeight: '700', marginBottom: 12 },
+  joinRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  codeInput: {
+    flex: 1, flexDirection: 'row', alignItems: 'center',
+    borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 12,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 10,
+  codeInputText: { flex: 1, fontSize: 16, fontWeight: '700', letterSpacing: 2 },
+  joinBtn: { width: 50, height: 50, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
+  sectionLabel: { fontSize: 12, fontWeight: '800', letterSpacing: 1, textTransform: 'uppercase', paddingHorizontal: 20, marginBottom: 10 },
+  meetCard: {
+    flexDirection: 'row', alignItems: 'center', marginHorizontal: 16,
+    marginBottom: 10, borderRadius: 14, padding: 14, borderWidth: 1,
   },
-  subtitle: {
-    fontSize: 14,
-    textAlign: 'center',
-    paddingHorizontal: 20,
-    lineHeight: 20,
-  },
-  actionContainer: {
-    padding: 20,
-  },
-  createButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 15,
-    borderRadius: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-  },
-  createButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 10,
-  },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 30,
-  },
-  line: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#e0e0e0',
-  },
-  orText: {
-    marginHorizontal: 15,
-    fontWeight: 'bold',
-  },
-  joinContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  inputWrapper: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 15,
-    height: 50,
-    backgroundColor: '#fff',
-  },
-  inputIcon: {
-    marginRight: 10,
-  },
-  input: {
-    flex: 1,
-    height: '100%',
-    fontSize: 16,
-  },
-  joinButton: {
-    marginLeft: 15,
-    paddingHorizontal: 25,
-    height: 50,
-    justifyContent: 'center',
-    borderRadius: 12,
-  },
-  joinButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+  meetIcon: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  meetInfo: { flex: 1 },
+  meetTitle: { fontSize: 15, fontWeight: '700' },
+  meetMeta: { fontSize: 12, marginTop: 2 },
+  meetAction: { padding: 8, marginLeft: 4 },
 });
