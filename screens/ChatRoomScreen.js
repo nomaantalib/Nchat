@@ -5,8 +5,11 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import MessageBubble from '../components/MessageBubble';
 import api from '../services/api';
+import io from 'socket.io-client';
 
 const EMOJIS = ['😀', '😂', '😍', '😎', '🥰', '😊', '❤️', '🔥', '👍', '🎉', '😢', '😡', '😱', '🤔', '🙏', '✨', '💯', '😘'];
+const ENDPOINT = Platform.OS === 'android' ? 'http://10.0.2.2:5000' : 'http://localhost:5000';
+var socket, selectedChatCompare;
 
 export default function ChatRoomScreen({ route, navigation }) {
   const { theme } = useTheme();
@@ -18,6 +21,7 @@ export default function ChatRoomScreen({ route, navigation }) {
   const [loading, setLoading] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [socketConnected, setSocketConnected] = useState(false);
   const flatListRef = useRef(null);
 
   const fetchMessages = async () => {
@@ -33,8 +37,32 @@ export default function ChatRoomScreen({ route, navigation }) {
   };
 
   useEffect(() => {
+    socket = io(ENDPOINT);
+    if (currentUser) {
+      socket.emit('setup', currentUser);
+      socket.on('connected', () => setSocketConnected(true));
+      
+      socket.on('message recieved', (newMessageRecieved) => {
+        if (!selectedChatCompare || selectedChatCompare !== newMessageRecieved.chat._id) {
+          // notification feature coming
+        } else {
+          setMessages((prev) => [...prev, newMessageRecieved]);
+        }
+      });
+    }
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
     fetchMessages();
-  }, [chatId]);
+    selectedChatCompare = chatId;
+    if (socketConnected && chatId) {
+      socket.emit('join chat', chatId);
+    }
+  }, [chatId, socketConnected]);
 
   // Simple typing indicator animation dots
   const dot1 = useRef(new Animated.Value(0)).current;
@@ -75,6 +103,7 @@ export default function ChatRoomScreen({ route, navigation }) {
       setShowEmojiPicker(false);
       
       const response = await api.post('/messages', { content: sentMsg, chatId });
+      socket.emit('new message', response.data);
       setMessages(prev => [...prev, response.data]);
     } catch (error) {
       console.error(error);
