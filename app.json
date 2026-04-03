@@ -1,29 +1,71 @@
 {
   "expo": {
-    "name": "Nchat",
-    "slug": "Nchat",
+    "name": "NChat",
+    "slug": "nchat",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0A0E14"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.nomaantalib.nchat",
+      "infoPlist": {
+        "NSContactsUsageDescription": "NChat uses your contacts to help you connect with friends who are already on NChat.",
+        "NSCameraUsageDescription": "NChat uses your camera for video calls and sending photos.",
+        "NSMicrophoneUsageDescription": "NChat uses your microphone for voice and video calls.",
+        "NSPhotoLibraryUsageDescription": "NChat uses your photo library for sending images in chats."
+      }
     },
     "android": {
+      "package": "com.nomaantalib.nchat",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#0A0E14"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.READ_CONTACTS",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.INTERNET"
+      ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow NChat to access your camera for video calls and photo capture.",
+          "microphonePermission": "Allow NChat to access your microphone for voice and video calls.",
+          "recordAudioAndroid": true
+        }
+      ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Allow NChat to access your contacts to find friends already on NChat."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow NChat to access your photos.",
+          "savePhotosPermission": "Allow NChat to save photos to your library.",
+          "isAccessMediaLocationEnabled": true
+        }
+      ]
+    ]
   }
 }

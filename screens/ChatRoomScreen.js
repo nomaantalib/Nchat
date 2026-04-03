@@ -10,9 +10,9 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import io from 'socket.io-client';
 import * as ImagePicker from 'expo-image-picker';
+import { SOCKET_URL } from '../config';
 
 const EMOJIS = ['😀','😂','😍','😎','🥰','😊','❤️','🔥','👍','🎉','😢','😡','😱','🤔','🙏','✨','💯','😘','🫡','🎵','🤩','💪','🙌','👏','🫶','😴','🤣','🥳','🫠','🤝'];
-const ENDPOINT = Platform.OS === 'android' ? 'http://10.0.2.2:5000' : 'http://localhost:5000';
 var socket, selectedChatCompare;
 
 export default function ChatRoomScreen({ route, navigation }) {
@@ -44,7 +44,7 @@ export default function ChatRoomScreen({ route, navigation }) {
   };
 
   useEffect(() => {
-    socket = io(ENDPOINT);
+    socket = io(SOCKET_URL);
     if (currentUser) {
       socket.emit('setup', currentUser);
       socket.on('connected', () => setSocketConnected(true));
