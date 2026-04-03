@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from '../services/api';
 
 const AuthContext = createContext();
 
@@ -8,7 +9,6 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is logged in
     const checkLogin = async () => {
       try {
         const userJSON = await AsyncStorage.getItem('user');
@@ -25,25 +25,27 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (email, password) => {
-    // Simulated backend validation
-    if (email && password) {
-      const user = { name: email.split('@')[0] || 'User', email };
-      await AsyncStorage.setItem('user', JSON.stringify(user));
-      setCurrentUser(user);
+    try {
+      const response = await api.post('/auth/login', { email, password });
+      await AsyncStorage.setItem('user', JSON.stringify(response.data));
+      setCurrentUser(response.data);
       return { success: true };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Invalid credentials';
+      return { success: false, error: message };
     }
-    return { success: false, error: 'Invalid email or password' };
   };
 
   const register = async (name, email, password) => {
-    // Simulated registration
-    if (name && email && password) {
-      const user = { name, email };
-      await AsyncStorage.setItem('user', JSON.stringify(user));
-      setCurrentUser(user);
+    try {
+      const response = await api.post('/auth/register', { name, email, password });
+      await AsyncStorage.setItem('user', JSON.stringify(response.data));
+      setCurrentUser(response.data);
       return { success: true };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Registration failed';
+      return { success: false, error: message };
     }
-    return { success: false, error: 'Please fill in all fields' };
   };
 
   const logout = async () => {

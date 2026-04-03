@@ -1,23 +1,40 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, FlatList, Animated } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, FlatList, Animated, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import MessageBubble from '../components/MessageBubble';
+import api from '../services/api';
 
 const EMOJIS = ['😀', '😂', '😍', '😎', '🥰', '😊', '❤️', '🔥', '👍', '🎉', '😢', '😡', '😱', '🤔', '🙏', '✨', '💯', '😘'];
 
 export default function ChatRoomScreen({ route, navigation }) {
   const { theme } = useTheme();
-  const { chatName } = route.params || { chatName: 'Contact' };
+  const { currentUser } = useAuth();
+  const { chatName, chatId } = route.params || { chatName: 'Contact' };
   
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState([
-    { id: '1', type: 'text', content: 'Hello! How are you?', sender: 'other', time: '10:00 AM' },
-    { id: '2', type: 'text', content: 'I am good, thanks! How about you?', sender: 'current', time: '10:05 AM' }
-  ]);
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const flatListRef = useRef(null);
+
+  const fetchMessages = async () => {
+    if (!chatId) return;
+    try {
+      const response = await api.get(`/messages/${chatId}`);
+      setMessages(response.data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMessages();
+  }, [chatId]);
 
   // Simple typing indicator animation dots
   const dot1 = useRef(new Animated.Value(0)).current;
@@ -49,34 +66,19 @@ export default function ChatRoomScreen({ route, navigation }) {
     }
   }, [isTyping]);
 
-  const handleSend = () => {
-    if (!message.trim()) return;
+  const handleSend = async () => {
+    if (!message.trim() || !chatId) return;
     
-    const newMessage = {
-      id: Date.now().toString(),
-      type: 'text',
-      content: message,
-      sender: 'current',
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
-    
-    setMessages(prev => [...prev, newMessage]);
-    setMessage('');
-    setShowEmojiPicker(false);
-    
-    // Simulate auto reply
-    setIsTyping(true);
-    setTimeout(() => {
-      setIsTyping(false);
-      const replyMessage = {
-        id: (Date.now() + 1).toString(),
-        type: 'text',
-        content: 'Got it! 👍',
-        sender: 'other',
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setMessages(prev => [...prev, replyMessage]);
-    }, 1500);
+    try {
+      const sentMsg = message;
+      setMessage('');
+      setShowEmojiPicker(false);
+      
+      const response = await api.post('/messages', { content: sentMsg, chatId });
+      setMessages(prev => [...prev, response.data]);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const handleTyping = (text) => {
@@ -120,15 +122,26 @@ export default function ChatRoomScreen({ route, navigation }) {
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        ref={flatListRef}
-        data={messages}
-        keyExtractor={item => item.id}
-        renderItem={({ item }) => <MessageBubble message={item} isSent={item.sender === 'current'} />}
-        contentContainerStyle={styles.messagesList}
-        onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-        onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
-      />
+      {loading ? (
+        <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 20 }} />
+      ) : (
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          keyExtractor={item => item._id}
+          renderItem={({ item }) => {
+            const isSent = item.sender?._id === currentUser._id;
+            const messageData = {
+              content: item.content,
+              time: new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+            return <MessageBubble message={messageData} isSent={isSent} />;
+          }}
+          contentContainerStyle={styles.messagesList}
+          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+          onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
+        />
+      )}
 
       {showEmojiPicker && (
         <View style={[styles.emojiPicker, { backgroundColor: theme.headerBg, borderTopColor: theme.border }]}>
