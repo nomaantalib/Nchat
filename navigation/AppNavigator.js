@@ -15,6 +15,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
+import ChatRoomScreen from '../screens/ChatRoomScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -66,6 +67,15 @@ function AuthStack() {
   );
 }
 
+function AppStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="MainTabs" component={MainTabs} />
+      <Stack.Screen name="ChatRoom" component={ChatRoomScreen} />
+    </Stack.Navigator>
+  );
+}
+
 export default function AppNavigator() {
   const { theme } = useTheme();
   const { currentUser, isLoading } = useAuth();
@@ -80,7 +90,7 @@ export default function AppNavigator() {
 
   return (
     <NavigationContainer>
-      {currentUser ? <MainTabs /> : <AuthStack />}
+      {currentUser ? <AppStack /> : <AuthStack />}
     </NavigationContainer>
   );
 }
