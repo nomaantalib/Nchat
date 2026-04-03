@@ -16,6 +16,8 @@ import ProfileScreen from '../screens/ProfileScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import ChatRoomScreen from '../screens/ChatRoomScreen';
+import StoryViewerScreen from '../screens/StoryViewerScreen';
+import CallScreen from '../screens/CallScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();

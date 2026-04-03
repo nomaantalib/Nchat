@@ -24,10 +24,7 @@ export default function MeetScreen({ navigation }) {
   return (
     <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.header}>
-        <Image 
-          source={{ uri: 'https://cdn-icons-png.flaticon.com/512/3042/3042083.png' }} 
-          style={styles.heroImage} 
-        />
+        <Ionicons name="videocam" size={100} color={theme.primary} style={{ marginBottom: 10 }} />
         <Text style={[styles.title, { color: theme.textDark }]}>Video Meetings</Text>
         <Text style={[styles.subtitle, { color: theme.textLight }]}>
           Connect with high-quality video calling powered by WebRTC structure.
