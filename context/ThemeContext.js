@@ -1,51 +1,48 @@
 import React, { createContext, useState, useContext } from 'react';
-
-const themes = {
-  telegram: {
-    primary: '#0088cc',
-    primaryDark: '#006699',
-    secondary: '#31b545',
-    background: '#f0f2f5',
-    headerBg: '#ffffff',
-    textDark: '#1a1a1a',
-    textLight: '#65676b',
-    border: '#e4e6eb',
-  },
-  whatsapp: {
-    primary: '#25D366',
-    primaryDark: '#128C7E',
-    secondary: '#075e54',
-    background: '#e5ded8',
-    headerBg: '#075e54',
-    textDark: '#ffffff',
-    textLight: '#dcf8c5',
-    border: '#075e54',
-  },
-  dark: {
-    primary: '#8774e1',
-    primaryDark: '#6b5b9c',
-    secondary: '#2a2a2a',
-    background: '#1a1a1a',
-    headerBg: '#2d2d2d',
-    textDark: '#ffffff',
-    textLight: '#b0b0b0',
-    border: '#3d3d3d',
-  },
-};
+import { useColorScheme } from 'react-native';
 
 const ThemeContext = createContext();
 
-export const ThemeProvider = ({ children }) => {
-  const [currentTheme, setCurrentTheme] = useState('telegram');
+const themes = {
+  light: {
+    primary: '#00BCD4',        // Cyan primary
+    secondary: '#0097A7',      // Deeper cyan
+    background: '#FFF9F0',     // Soft cream pastel background
+    headerBg: '#FFF5E6',       // Warm pastel cream header
+    textDark: '#2C2C3A',       // Near black
+    textLight: '#A89F91',      // Warm muted text
+    border: '#F0E8DC',         // Pastel cream border
+    sentMsg: '#00BCD4',        // Cyan sent bubble
+    receivedMsg: '#FFF5E6',    // Cream pastel received bubble
+    isDark: false,
+  },
+  dark: {
+    primary: '#00E5FF',        // Vivid electric cyan
+    secondary: '#00B8D9',      // Rich teal cyan
+    background: '#0A0E14',     // Deep dark navy
+    headerBg: '#111620',       // Slightly lighter header
+    textDark: '#F5F0E8',       // Cream off-white text
+    textLight: '#6B7280',      // Cool grey
+    border: '#1E2430',         // Subtle dark border
+    sentMsg: '#00E5FF',        // Cyan sent bubble
+    receivedMsg: '#161D2A',    // Dark navy received bubble
+    isDark: true,
+  }
+};
 
-  const switchTheme = (themeName) => {
-    if (themes[themeName]) {
-      setCurrentTheme(themeName);
-    }
+export const ThemeProvider = ({ children }) => {
+  const systemScheme = useColorScheme();
+  const [themeMode, setThemeMode] = useState('system'); // 'system', 'light', 'dark'
+
+  const getActiveThemeName = () => {
+    if (themeMode === 'system') return systemScheme === 'dark' ? 'dark' : 'light';
+    return themeMode;
   };
 
+  const activeTheme = themes[getActiveThemeName()];
+
   return (
-    <ThemeContext.Provider value={{ themeName: currentTheme, theme: themes[currentTheme], switchTheme }}>
+    <ThemeContext.Provider value={{ theme: activeTheme, themeMode, setThemeMode }}>
       {children}
     </ThemeContext.Provider>
   );

@@ -22,7 +22,12 @@ export default function MeetScreen({ navigation }) {
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
+    <ScrollView 
+      style={[styles.container, { backgroundColor: theme.background }]}
+      showsVerticalScrollIndicator={true}
+      indicatorStyle="default"
+      scrollIndicatorInsets={{ right: 1 }}
+    >
       <View style={styles.header}>
         <Ionicons name="videocam" size={100} color={theme.primary} style={{ marginBottom: 10 }} />
         <Text style={[styles.title, { color: theme.textDark }]}>Video Meetings</Text>

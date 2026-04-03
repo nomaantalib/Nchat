@@ -66,6 +66,9 @@ export default function ChatsScreen({ navigation }) {
             );
           }}
           contentContainerStyle={{ padding: 8 }}
+          showsVerticalScrollIndicator={true}
+          indicatorStyle="default"
+          scrollIndicatorInsets={{ right: 1 }}
         />
       )}
       <TouchableOpacity style={[styles.fab, { backgroundColor: theme.primary }]}>

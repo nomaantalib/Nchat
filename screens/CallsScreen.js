@@ -46,6 +46,9 @@ export default function CallsScreen() {
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={{ padding: 8 }}
+        showsVerticalScrollIndicator={true}
+        indicatorStyle="default"
+        scrollIndicatorInsets={{ right: 1 }}
       />
       <TouchableOpacity style={[styles.fab, { backgroundColor: theme.primary }]}>
         <Ionicons name="call" size={24} color="#fff" />
