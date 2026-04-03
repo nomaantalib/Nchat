@@ -7,7 +7,7 @@ const generateToken = (id) => {
 
 const registerUser = async (req, res) => {
   try {
-    const { name, email, password, pic } = req.body;
+    const { name, email, password, pic, phone } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'Please enter all fields' });
@@ -18,12 +18,13 @@ const registerUser = async (req, res) => {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    const user = await User.create({ name, email, password, pic });
+    const user = await User.create({ name, email, password, pic, phone: phone || '' });
     if (user) {
       res.status(201).json({
         _id: user._id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
         pic: user.pic,
         token: generateToken(user._id),
       });
@@ -92,4 +93,22 @@ const updateProfile = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, authUser, searchUsers, updateProfile };
+const matchByPhones = async (req, res) => {
+  try {
+    const { phones } = req.body; // array of normalized phone strings
+    if (!phones || !Array.isArray(phones)) {
+      return res.status(400).json({ message: 'phones array required' });
+    }
+    // Normalize: strip spaces, dashes, brackets
+    const normalized = phones.map(p => p.replace(/[\s\-().+]/g, ''));
+    const users = await User.find({
+      phone: { $in: normalized },
+      _id: { $ne: req.user._id },
+    }).select('-password');
+    res.json(users);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+module.exports = { registerUser, authUser, searchUsers, updateProfile, matchByPhones };

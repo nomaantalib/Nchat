@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  ActivityIndicator, TextInput, Modal, Image, Animated
+  ActivityIndicator, TextInput, Modal, Image, Share, Alert
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import ChatItem from '../components/ChatItem';
 import api from '../services/api';
+import * as Contacts from 'expo-contacts';
 
 export default function ChatsScreen({ navigation }) {
   const { theme } = useTheme();
@@ -16,9 +17,10 @@ export default function ChatsScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showNewChat, setShowNewChat] = useState(false);
-  const [userSearch, setUserSearch] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [searching, setSearching] = useState(false);
+  const [contactSearch, setContactSearch] = useState('');
+  const [nchatContacts, setNchatContacts] = useState([]);     // on NChat
+  const [otherContacts, setOtherContacts] = useState([]);     // not on NChat
+  const [loadingContacts, setLoadingContacts] = useState(false);
 
   const fetchChats = async () => {
     try {
@@ -33,18 +35,52 @@ export default function ChatsScreen({ navigation }) {
 
   useEffect(() => { fetchChats(); }, []);
 
-  // Search users for new chat
-  const handleUserSearch = async (text) => {
-    setUserSearch(text);
-    if (!text.trim()) { setSearchResults([]); return; }
-    setSearching(true);
+  const openNewChat = async () => {
+    setShowNewChat(true);
+    setLoadingContacts(true);
     try {
-      const res = await api.get(`/auth/users?search=${text}`);
-      setSearchResults(res.data);
+      // 1. Read device contacts
+      const { status } = await Contacts.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission denied', 'Cannot access contacts without permission.');
+        setLoadingContacts(false);
+        return;
+      }
+      const { data } = await Contacts.getContactsAsync({
+        fields: [Contacts.Fields.PhoneNumbers, Contacts.Fields.Name],
+      });
+
+      // 2. Collect all phone numbers
+      const allPhones = [];
+      const phoneToContact = {};
+      data.forEach(contact => {
+        (contact.phoneNumbers || []).forEach(p => {
+          const normalized = p.number.replace(/[\s\-().+]/g, '');
+          allPhones.push(normalized);
+          phoneToContact[normalized] = contact.name || 'Unknown';
+        });
+      });
+
+      // 3. Match against backend
+      const res = await api.post('/auth/match-phones', { phones: allPhones });
+      const matchedPhones = res.data.map(u => u.phone);
+
+      setNchatContacts(res.data);
+
+      // 4. Build "not on NChat" list from device contacts
+      const notOnNchat = [];
+      data.forEach(contact => {
+        const nums = (contact.phoneNumbers || []).map(p => p.number.replace(/[\s\-().+]/g, ''));
+        const matched = nums.some(n => matchedPhones.includes(n));
+        if (!matched && nums.length > 0) {
+          notOnNchat.push({ name: contact.name, phone: (contact.phoneNumbers[0]?.number || '') });
+        }
+      });
+      setOtherContacts(notOnNchat);
     } catch (e) {
       console.error(e);
     } finally {
-      setSearching(false);
+      setLoadingContacts(false);
     }
   };
 
@@ -52,15 +88,18 @@ export default function ChatsScreen({ navigation }) {
     try {
       setShowNewChat(false);
       const res = await api.post('/chats', { userId });
+      const otherUser = res.data.users?.find(u => u._id !== currentUser._id);
       navigation.navigate('ChatRoom', {
         chatId: res.data._id,
-        chatName: res.data.isGroupChat ? res.data.chatName : res.data.users.find(u => u._id !== currentUser._id)?.name,
+        chatName: res.data.isGroupChat ? res.data.chatName : otherUser?.name,
+        chatPic: otherUser?.pic,
       });
       fetchChats();
     } catch (e) {
       console.error(e);
     }
   };
+
 
   const getOtherUser = (users) => {
     if (!users || users.length < 2) return { name: 'Unknown', pic: '' };
@@ -134,59 +173,118 @@ export default function ChatsScreen({ navigation }) {
       )}
 
       {/* New Chat FAB */}
-      <TouchableOpacity style={[styles.fab, { backgroundColor: theme.primary }]} onPress={() => setShowNewChat(true)}>
+      <TouchableOpacity style={[styles.fab, { backgroundColor: theme.primary }]} onPress={openNewChat}>
         <Ionicons name="create-outline" size={26} color="#fff" />
       </TouchableOpacity>
 
-      {/* New Chat Modal */}
+      {/* Contacts Modal */}
       <Modal visible={showNewChat} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContainer, { backgroundColor: theme.headerBg }]}>
+            {/* Header */}
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: theme.textDark }]}>New Chat</Text>
-              <TouchableOpacity onPress={() => { setShowNewChat(false); setUserSearch(''); setSearchResults([]); }}>
+              <TouchableOpacity onPress={() => { setShowNewChat(false); setContactSearch(''); }}>
                 <Ionicons name="close" size={26} color={theme.textLight} />
               </TouchableOpacity>
             </View>
 
-            <View style={[styles.searchBar, { backgroundColor: theme.background, borderColor: theme.border, marginBottom: 10 }]}>
-              <Ionicons name="search" size={18} color={theme.textLight} style={{ marginRight: 8 }} />
+            {/* Search */}
+            <View style={[styles.searchBar, { backgroundColor: theme.background, borderColor: theme.border, marginBottom: 8 }]}>
+              <Ionicons name="search" size={16} color={theme.textLight} style={{ marginRight: 8 }} />
               <TextInput
                 style={[styles.searchInput, { color: theme.textDark }]}
-                placeholder="Search by name or email..."
+                placeholder="Search contacts..."
                 placeholderTextColor={theme.textLight}
-                value={userSearch}
-                onChangeText={handleUserSearch}
-                autoFocus
+                value={contactSearch}
+                onChangeText={setContactSearch}
               />
             </View>
 
-            {searching && <ActivityIndicator color={theme.primary} style={{ marginTop: 10 }} />}
+            {loadingContacts ? (
+              <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <ActivityIndicator size="large" color={theme.primary} />
+                <Text style={[{ color: theme.textLight, marginTop: 10 }]}>Reading contacts...</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={[
+                  ...(nchatContacts.filter(u =>
+                    !contactSearch || u.name?.toLowerCase().includes(contactSearch.toLowerCase()) || u.phone?.includes(contactSearch)
+                  ).map(u => ({ ...u, isNchat: true }))),
+                  ...(otherContacts.filter(c =>
+                    !contactSearch || c.name?.toLowerCase().includes(contactSearch.toLowerCase()) || c.phone?.includes(contactSearch)
+                  ).map(c => ({ ...c, isNchat: false }))),
+                ]}
+                keyExtractor={(item, index) => item._id || `other-${index}`}
+                showsVerticalScrollIndicator
+                indicatorStyle={theme.isDark ? 'white' : 'black'}
+                ListHeaderComponent={
+                  nchatContacts.length > 0 && (
+                    <Text style={[styles.contactsLabel, { color: theme.primary }]}>
+                      On NChat ({nchatContacts.length})
+                    </Text>
+                  )
+                }
+                renderItem={({ item, index }) => {
+                  // Separator label
+                  const isFirstOther = !item.isNchat && index === nchatContacts.filter(u =>
+                    !contactSearch || u.name?.toLowerCase().includes(contactSearch.toLowerCase())
+                  ).length;
 
-            <FlatList
-              data={searchResults}
-              keyExtractor={(item) => item._id}
-              ListEmptyComponent={
-                userSearch.length > 0 && !searching ? (
-                  <Text style={[styles.noResults, { color: theme.textLight }]}>No users found</Text>
-                ) : null
-              }
-              renderItem={({ item }) => (
-                <TouchableOpacity style={[styles.userRow, { borderBottomColor: theme.border }]} onPress={() => startChat(item._id)}>
-                  <View style={[styles.userAvatar, { backgroundColor: theme.primary }]}>
-                    {item.pic ? (
-                      <Image source={{ uri: item.pic }} style={styles.userAvatarImg} />
-                    ) : (
-                      <Text style={styles.userAvatarText}>{item.name?.charAt(0).toUpperCase()}</Text>
-                    )}
+                  return (
+                    <>
+                      {isFirstOther && otherContacts.length > 0 && (
+                        <Text style={[styles.contactsLabel, { color: theme.textLight }]}>
+                          Invite to NChat ({otherContacts.length})
+                        </Text>
+                      )}
+                      <TouchableOpacity
+                        style={[styles.userRow, { borderBottomColor: theme.border }]}
+                        onPress={() => {
+                          if (item.isNchat) {
+                            startChat(item._id);
+                          } else {
+                            Share.share({ message: `Hey! I'm using NChat to chat. Join me here: https://nchat.app\nInviting ${item.name} (${item.phone})` });
+                          }
+                        }}
+                      >
+                        <View style={[styles.userAvatar, { backgroundColor: item.isNchat ? theme.primary : theme.border }]}>
+                          {item.pic ? (
+                            <Image source={{ uri: item.pic }} style={styles.userAvatarImg} />
+                          ) : (
+                            <Text style={[styles.userAvatarText, { color: item.isNchat ? '#fff' : theme.textLight }]}>
+                              {item.name?.charAt(0)?.toUpperCase()}
+                            </Text>
+                          )}
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.userName, { color: theme.textDark }]}>{item.name}</Text>
+                          <Text style={[styles.userEmail, { color: theme.textLight }]}>
+                            {item.isNchat ? `📱 ${item.phone || item.email}` : `📞 ${item.phone}`}
+                          </Text>
+                        </View>
+                        {item.isNchat ? (
+                          <View style={[styles.chatBadge, { backgroundColor: theme.primary }]}>
+                            <Text style={styles.chatBadgeText}>Chat</Text>
+                          </View>
+                        ) : (
+                          <View style={[styles.inviteBadge, { borderColor: theme.primary }]}>
+                            <Text style={[styles.inviteBadgeText, { color: theme.primary }]}>Invite</Text>
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    </>
+                  );
+                }}
+                ListEmptyComponent={
+                  <View style={{ alignItems: 'center', marginTop: 40 }}>
+                    <Ionicons name="people-outline" size={50} color={theme.textLight} />
+                    <Text style={[{ color: theme.textLight, marginTop: 10 }]}>No contacts found</Text>
                   </View>
-                  <View>
-                    <Text style={[styles.userName, { color: theme.textDark }]}>{item.name}</Text>
-                    <Text style={[styles.userEmail, { color: theme.textLight }]}>{item.email}</Text>
-                  </View>
-                </TouchableOpacity>
-              )}
-            />
+                }
+              />
+            )}
           </View>
         </View>
       </Modal>
@@ -227,4 +325,9 @@ const styles = StyleSheet.create({
   userName: { fontSize: 16, fontWeight: '600' },
   userEmail: { fontSize: 13, marginTop: 2 },
   noResults: { textAlign: 'center', marginTop: 20, fontSize: 15 },
+  contactsLabel: { fontSize: 12, fontWeight: '800', letterSpacing: 0.8, textTransform: 'uppercase', paddingVertical: 10, paddingHorizontal: 4 },
+  chatBadge: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 },
+  chatBadgeText: { color: '#fff', fontWeight: '800', fontSize: 13 },
+  inviteBadge: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1.5 },
+  inviteBadgeText: { fontWeight: '700', fontSize: 13 },
 });

@@ -8,6 +8,7 @@ export default function RegisterScreen({ navigation }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [phone, setPhone] = useState('');
   const { register } = useAuth();
   const { theme } = useTheme();
 
@@ -16,7 +17,7 @@ export default function RegisterScreen({ navigation }) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
-    const result = await register(name, email, password);
+    const result = await register(name, email, password, phone);
     if (!result.success) {
       Alert.alert('Error', result.error);
     }
@@ -62,6 +63,14 @@ export default function RegisterScreen({ navigation }) {
             value={password}
             onChangeText={setPassword}
             secureTextEntry
+          />
+          <TextInput
+            style={[styles.input, { borderColor: theme.border, backgroundColor: theme.headerBg, color: theme.textDark }]}
+            placeholder="Phone Number (optional)"
+            placeholderTextColor={theme.textLight}
+            value={phone}
+            onChangeText={setPhone}
+            keyboardType="phone-pad"
           />
           
           <TouchableOpacity style={[styles.authBtn, { backgroundColor: theme.primary }]} onPress={handleRegister}>
