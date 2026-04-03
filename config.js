@@ -1,8 +1,7 @@
-// ─── DEPLOYMENT CONFIG ───────────────────────────────────────────────────────
-// Replace this URL with your actual Render backend URL after deploying.
-// Example: 'https://nchat-backend.onrender.com'
-// For local development, use 'http://localhost:5000'
-export const BACKEND_URL = 'https://nchat-backend.onrender.com';
+// For local development, use your PC's IP address (192.168.1.34)
+export const BACKEND_URL = 'http://192.168.1.34:5000'; // USE LOCAL IP FOR EXPO GO TESTING
+// When you deploy to Render, change this back to your Render URL!
+// export const BACKEND_URL = 'https://your-nchat-backend.onrender.com';
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const BASE_URL = `${BACKEND_URL}/api`;

@@ -39,11 +39,11 @@ export default function App() {
   useEffect(() => {
     const requestCorePermissions = async () => {
       try {
-        await Camera.requestCameraPermissionsAsync();
-        await Camera.requestMicrophonePermissionsAsync();
-        await Contacts.requestPermissionsAsync();
-        await MediaLibrary.requestPermissionsAsync();
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
+        const { status: camStatus } = await Camera.requestCameraPermissionsAsync();
+        const { status: micStatus } = await Camera.requestMicrophonePermissionsAsync();
+        const { status: conStatus } = await Contacts.requestPermissionsAsync();
+        const { status: libStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        console.log("Core Permissions Status:", { camStatus, micStatus, conStatus, libStatus });
       } catch (err) {
         console.log("Permission system ignored on Web or missing modules", err);
       }

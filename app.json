@@ -63,6 +63,8 @@
         {
           "photosPermission": "Allow NChat to access your photos.",
           "savePhotosPermission": "Allow NChat to save photos to your library.",
+          "videosPermission": "Allow NChat to access your videos.",
+          "audioPermission": "Allow NChat to access your audio files.",
           "isAccessMediaLocationEnabled": true
         }
       ]
