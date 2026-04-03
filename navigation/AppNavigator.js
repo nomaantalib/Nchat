@@ -72,6 +72,7 @@ function AppStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="MainTabs" component={MainTabs} />
       <Stack.Screen name="ChatRoom" component={ChatRoomScreen} />
+      <Stack.Screen name="StoryViewer" component={StoryViewerScreen} />
     </Stack.Navigator>
   );
 }

@@ -7,6 +7,7 @@ const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const messageRoutes = require('./routes/messageRoutes');
+const statusRoutes = require('./routes/statusRoutes');
 
 // Load env vars
 dotenv.config();
@@ -24,6 +25,7 @@ app.use(express.json()); // to accept JSON data
 app.use('/api/auth', authRoutes); // maps to /register and /login inside
 app.use('/api/chats', chatRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/status', statusRoutes);
 
 app.get('/', (req, res) => {
   res.send('API is running successfully');

@@ -1,50 +1,96 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator, ScrollView } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
+import api from '../services/api';
 
-const mockStories = [
-  { id: '1', name: 'Rahul Sharma', time: '10:30 AM' },
-  { id: '2', name: 'Neha Gupta', time: '9:15 AM' },
-];
-
-export default function StatusScreen() {
+export default function StatusScreen({ navigation }) {
   const { theme } = useTheme();
+  const { currentUser } = useAuth();
+  const [groupedStatuses, setGroupedStatuses] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchStatuses = async () => {
+    try {
+      const response = await api.get('/status');
+      setGroupedStatuses(response.data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStatuses();
+  }, []);
+
+  const handleUploadStatus = async () => {
+    // Dummy random image generator for mock upload
+    const randomSeed = Math.floor(Math.random() * 1000);
+    const mockImage = `https://picsum.photos/seed/${randomSeed}/800/1200`;
+    try {
+      await api.post('/status', { mediaUrl: mockImage, mediaType: 'image' });
+      fetchStatuses();
+    } catch (error) {
+      console.error('Error uploading status', error);
+    }
+  };
+
+  const renderStatusThumb = ({ item }) => (
+    <TouchableOpacity 
+      style={styles.statusThumbContainer}
+      onPress={() => navigation.navigate('StoryViewer', { stories: item.stories, user: item.user })}
+    >
+      <View style={[styles.imageRing, { borderColor: theme.primary }]}>
+        <Image source={{ uri: item.user.pic }} style={styles.thumbImage} />
+      </View>
+      <Text style={[styles.thumbName, { color: theme.textDark }]} numberOfLines={1}>
+        {item.user._id === currentUser._id ? 'My Status' : item.user.name}
+      </Text>
+    </TouchableOpacity>
+  );
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={[styles.section, { backgroundColor: theme.headerBg }]}>
-        <View style={styles.storyItem}>
-          <View style={[styles.avatarContainer, { borderColor: theme.border }]}>
-            <View style={[styles.myStatusAvatar, { backgroundColor: theme.primary }]}>
-              <Ionicons name="add" size={24} color="#fff" />
-            </View>
-          </View>
-          <View style={styles.storyInfo}>
-            <Text style={[styles.name, { color: theme.textDark }]}>My Status</Text>
-            <Text style={[styles.time, { color: theme.textLight }]}>Tap to add status update</Text>
-          </View>
-        </View>
-      </View>
-
-      <Text style={[styles.sectionTitle, { color: theme.textLight }]}>Recent updates</Text>
-
-      <View style={[styles.section, { backgroundColor: theme.headerBg }]}>
-        {mockStories.map(story => (
-          <TouchableOpacity key={story.id} style={styles.storyItem}>
-            <View style={[styles.avatarContainer, { borderColor: theme.primary }]}>
-              <View style={[styles.statusAvatar, { backgroundColor: theme.secondary }]}>
-                <Text style={styles.avatarText}>{story.name.charAt(0)}</Text>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      {/* Horizontal List Requirement */}
+      <View style={[styles.horizontalWrapper, { backgroundColor: theme.headerBg }]}>
+        <Text style={[styles.sectionTitle, { color: theme.textDark }]}>Recent Updates</Text>
+        
+        {loading ? (
+           <ActivityIndicator size="small" color={theme.primary} />
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+            {/* My Status Add Button */}
+            <TouchableOpacity style={styles.statusThumbContainer} onPress={handleUploadStatus}>
+              <View style={styles.addStatusRing}>
+                <Image source={{ uri: currentUser?.pic }} style={styles.thumbImage} />
+                <View style={[styles.addIconBadge, { backgroundColor: theme.primary }]}>
+                  <Ionicons name="add" size={16} color="#fff" />
+                </View>
               </View>
-            </View>
-            <View style={styles.storyInfo}>
-              <Text style={[styles.name, { color: theme.textDark }]}>{story.name}</Text>
-              <Text style={[styles.time, { color: theme.textLight }]}>{story.time}</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
+              <Text style={[styles.thumbName, { color: theme.textDark }]}>Add Status</Text>
+            </TouchableOpacity>
+
+            {groupedStatuses.map((item, index) => (
+              <React.Fragment key={index}>
+                 {renderStatusThumb({ item })}
+              </React.Fragment>
+            ))}
+          </ScrollView>
+        )}
       </View>
-    </ScrollView>
+      
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Ionicons name="images-outline" size={60} color={theme.textLight} />
+        <Text style={{ color: theme.textLight, marginTop: 10 }}>Your statuses are end-to-end encrypted</Text>
+      </View>
+
+      <TouchableOpacity style={[styles.fab, { backgroundColor: theme.primary }]} onPress={handleUploadStatus}>
+        <Ionicons name="camera" size={24} color="#fff" />
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -52,62 +98,77 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  section: {
-    marginTop: 10,
-    borderTopWidth: 0.5,
-    borderBottomWidth: 0.5,
-    borderColor: '#e4e6eb',
+  horizontalWrapper: {
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
   },
   sectionTitle: {
-    paddingHorizontal: 15,
-    paddingTop: 15,
-    paddingBottom: 5,
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 'bold',
+    marginLeft: 15,
+    marginBottom: 10,
   },
-  storyItem: {
-    flexDirection: 'row',
-    padding: 15,
+  horizontalScroll: {
+    paddingLeft: 10,
+  },
+  statusThumbContainer: {
     alignItems: 'center',
+    marginHorizontal: 8,
+    width: 60,
   },
-  avatarContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+  imageRing: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 15,
   },
-  myStatusAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  addStatusRing: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  statusAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  thumbImage: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+  },
+  thumbName: {
+    fontSize: 12,
+    marginTop: 5,
+    textAlign: 'center',
+  },
+  addIconBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#fff',
   },
-  avatarText: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  storyInfo: {
-    flex: 1,
+  fab: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
-  },
-  name: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  time: {
-    fontSize: 14,
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
   },
 });
